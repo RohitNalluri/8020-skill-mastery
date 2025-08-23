@@ -1,0 +1,55 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum PlanStatus {
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+model Plan {
+  id                     String      @id @default(cuid())
+  userId                 String
+  status                 PlanStatus  @default(ACTIVE)
+  skillToMaster          String
+  tasksCompleted         Int         @default(0)
+  planData               Json
+  taskCompletionStatus   Json
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
+
+  notes                  Note[]
+
+  @@index([userId, status])
+}
+
+model UserSetting {
+  userId                String     @id
+  geminiApiKeyEncrypted String?
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  userId    String
+  planId    String
+  taskKey   String
+  content   String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  plan      Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, taskKey])
+  @@index([userId, planId])
+}
