@@ -24,10 +24,14 @@ model Plan {
   tasksCompleted         Int         @default(0)
   planData               Json
   taskCompletionStatus   Json
+  // Optional commitment gating fields (V1)
+  commitmentText         String?
+  dailyMinutes           Int?
   createdAt              DateTime    @default(now())
   updatedAt              DateTime    @updatedAt
 
   notes                  Note[]
+  sessions               Session[]
 
   @@index([userId, status])
 }
@@ -52,4 +56,23 @@ model Note {
 
   @@unique([planId, taskKey])
   @@index([userId, planId])
+}
+
+model Session {
+  id            String    @id @default(cuid())
+  userId        String
+  planId        String
+  taskKey       String
+  startedAt     DateTime  @default(now())
+  endedAt       DateTime?
+  durationMins  Int?
+  challenge     String?
+  breakthrough  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  plan          Plan      @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([userId, planId])
+  @@index([userId, startedAt])
 }

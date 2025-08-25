@@ -1,7 +1,7 @@
 'use client';
 /*
-  Purpose: Plans grid page. Shows all user's plans as tiles and allows creating a new plan.
-  Enforces max 3 ACTIVE plans in UI (disabled New Plan when >=3), server also enforces.
+  Purpose: Skill Paths grid page. Shows all user's paths as tiles and allows creating a new path.
+  Enforces max 3 ACTIVE paths in UI (disabled New Skill Path when >=3), server also enforces.
 */
 import * as React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -69,13 +69,20 @@ export default function PlansPage() {
       await qc.invalidateQueries({ queryKey: ['plans'] });
       router.push(`/plans/${payload.id}`);
     },
-    onError: (err: any) => setErrorMsg(err?.message || 'Failed to create plan'),
+    onError: (err: unknown) => {
+      const msg = err instanceof Error
+        ? err.message
+        : (typeof err === 'object' && err !== null && 'message' in err && typeof (err as { message: unknown }).message === 'string')
+          ? (err as { message: string }).message
+          : 'Failed to create plan';
+      setErrorMsg(msg);
+    },
   });
 
   function onSubmit(values: z.infer<typeof createSchema>) {
     setErrorMsg(null);
     if (!canCreate) {
-      setErrorMsg('You can have at most 3 active plans. Complete or archive one to add a new plan.');
+      setErrorMsg('You can have at most 3 active Skill Paths. Complete or archive one to add a new path.');
       return;
     }
     createMutation.mutate(values.skill);
@@ -85,16 +92,16 @@ export default function PlansPage() {
     <div className="max-w-6xl mx-auto p-6 space-y-6">
       <div className="flex items-end justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Your Plans</h1>
-          <p className="text-sm text-muted-foreground">Create up to 3 active plans. Finish one before adding more.</p>
+          <h1 className="text-2xl font-semibold">Your Skill Paths</h1>
+          <p className="text-sm text-muted-foreground">Create up to 3 active Skill Paths. Finish one before adding more.</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* New Plan card */}
+        {/* New Skill Path card */}
         <Card className={cn('border-dashed', !canCreate && 'opacity-60 pointer-events-none')}>
           <CardHeader>
-            <CardTitle>New Plan</CardTitle>
+            <CardTitle>New Skill Path</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="space-y-2">
@@ -105,12 +112,12 @@ export default function PlansPage() {
           </CardContent>
           <CardFooter>
             <Button onClick={form.handleSubmit(onSubmit)} disabled={!canCreate || createMutation.isPending}>
-              {createMutation.isPending ? 'Creating…' : 'Create Plan'}
+              {createMutation.isPending ? 'Creating…' : 'Create Skill Path'}
             </Button>
           </CardFooter>
         </Card>
 
-        {/* Existing plans */}
+        {/* Existing Skill Paths */}
         {isLoading && (
           <Card className="col-span-full">
             <CardContent className="p-4">Loading…</CardContent>

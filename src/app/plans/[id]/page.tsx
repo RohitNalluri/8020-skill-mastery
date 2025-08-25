@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { countTotalTasks, taskKey } from '@/lib/plan-utils';
 import type { GeneratedPlan } from '@/lib/gemini';
+import { FileText } from 'lucide-react';
 
 interface PageProps {
   params: { id: string };
@@ -45,6 +46,7 @@ function TaskRow({ planId, skill, wi, di, ti, t, checked, disabled, onToggle, on
   });
 
   const [content, setContent] = React.useState('');
+  const textRef = React.useRef<HTMLTextAreaElement | null>(null);
   React.useEffect(() => {
     setContent(noteQuery.data?.note?.content || '');
   }, [noteQuery.data?.note?.content]);
@@ -108,12 +110,30 @@ function TaskRow({ planId, skill, wi, di, ti, t, checked, disabled, onToggle, on
                 {suggestResource.isPending ? 'Finding…' : 'Suggest resource'}
               </Button>
             )}
+            {noteQuery.data?.note ? (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="text-amber-600"
+                onClick={() => {
+                  if (textRef.current) {
+                    textRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    setTimeout(() => textRef.current?.focus(), 200);
+                  }
+                }}
+                aria-label="View note"
+                title="View note"
+              >
+                <FileText className="size-5" />
+              </Button>
+            ) : null}
           </div>
         </div>
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">Notes</label>
           <textarea
             className="w-full min-h-[72px] rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            ref={textRef}
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder="Write your deconstruction, outline, or reflections here…"
@@ -153,6 +173,15 @@ export default function PlanDetailPage({ params }: PageProps) {
       const res = await fetch(`/api/plans/${id}`);
       if (!res.ok) throw new Error('Failed to load plan');
       return res.json();
+    },
+  });
+
+  const recentQuery = useQuery({
+    queryKey: ['recentSessions', id],
+    queryFn: async () => {
+      const res = await fetch(`/api/sessions/recent?planId=${encodeURIComponent(id)}&limit=3`);
+      if (!res.ok) throw new Error('Failed to load recent reflections');
+      return res.json() as Promise<{ sessions: { id: string; taskKey: string; challenge?: string | null; breakthrough?: string | null; durationMins?: number | null; startedAt: string; endedAt?: string | null }[] }>;
     },
   });
 
@@ -226,8 +255,8 @@ export default function PlanDetailPage({ params }: PageProps) {
   if (!plan) {
     return (
       <div className="max-w-4xl mx-auto p-6 space-y-4">
-        <p>Plan not found.</p>
-        <Button onClick={() => router.push('/plans')}>Back to Plans</Button>
+        <p>Skill Path not found.</p>
+        <Button onClick={() => router.push('/plans')}>Back to Skill Paths</Button>
       </div>
     );
   }
@@ -240,7 +269,7 @@ export default function PlanDetailPage({ params }: PageProps) {
           <p className="text-sm text-muted-foreground">{plan.status}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="secondary" onClick={() => router.push('/plans')}>All Plans</Button>
+          <Button variant="secondary" onClick={() => router.push('/plans')}>All Skill Paths</Button>
           {plan.status === 'ACTIVE' ? (
             <Button onClick={() => statusMutation.mutate('COMPLETED')} disabled={statusMutation.isPending}>Mark Completed</Button>
           ) : (
@@ -256,6 +285,34 @@ export default function PlanDetailPage({ params }: PageProps) {
       </div>
 
       {errorMsg && <p className="text-sm text-red-500">{errorMsg}</p>}
+
+      {/* Recent reflections */}
+      {recentQuery.data?.sessions?.length ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Recent Reflections</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            {recentQuery.data.sessions.map((s) => (
+              <div key={s.id} className="space-y-1 border-b last:border-b-0 pb-3 last:pb-0">
+                <div className="text-xs text-muted-foreground">
+                  {new Date(s.startedAt).toLocaleString()} · {s.durationMins ? `${s.durationMins} min` : '—'} · {s.taskKey}
+                </div>
+                {s.challenge ? (
+                  <div>
+                    <span className="font-medium">Challenge:</span> {s.challenge}
+                  </div>
+                ) : null}
+                {s.breakthrough ? (
+                  <div>
+                    <span className="font-medium">Breakthrough:</span> {s.breakthrough}
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Accordion type="multiple" className="w-full">
         {plan.planData.weeks.map((week, wi) => (

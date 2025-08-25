@@ -9,6 +9,20 @@ Purpose: Lock the smallest set of flows and UI states that drive daily engagemen
 - Capture high-signal feedback with near-zero friction.
 - Visualize momentum without clutter.
 
+## Status (Aug 25, 2025)
+### Completed
+- One Thing logic: `nextOneThing()` helper implemented in `src/lib/plan-utils.ts` (prioritizes produce tasks).
+- OneThingCard UI: `src/components/OneThingCard.tsx` with Begin (stub) + Mark Done; badges for Produce/Learn; empty-state CTA; a11y polish.
+- Dashboard integration: `src/app/dashboard/page.tsx` fetches plans, picks ACTIVE, computes One Thing, and toggles Done via `/api/plans/[id]` (check action). Trailing-URL bug fixed.
+- Lint/typecheck: all current issues resolved.
+
+### Pending / In Progress
+- Session Timer (full-screen) with start/pause/finish and mid-prompt; auto-open Journal on finish.
+- Journal modal: required 2 fields; persist on finish; show last 3 reflections on plan detail.
+- Sessions model + API: `Session` table and `/api/sessions` endpoints (start/finish/summary).
+- Momentum summary endpoint + compact widget on dashboard.
+- Commitment gating: modal if commitment not set on plan.
+
 
 ## Prerequisites / First-run
 If no ACTIVE plan exists:

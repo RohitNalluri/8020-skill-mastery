@@ -12,9 +12,15 @@ import { Button } from '@/components/ui/button';
 import { OneThingCard, type OneThing } from '@/components/OneThingCard';
 import { nextOneThing } from '@/lib/plan-utils';
 import type { GeneratedPlan } from '@/lib/gemini';
+import { SessionTimer } from '@/components/SessionTimer';
+import { JournalModal } from '@/components/JournalModal';
 
 export default function DashboardPage() {
   const queryClient = useQueryClient();
+  const [showTimer, setShowTimer] = React.useState(false);
+  const [showJournal, setShowJournal] = React.useState(false);
+  const [currentOT, setCurrentOT] = React.useState<OneThing | null>(null);
+  const [lastElapsedSec, setLastElapsedSec] = React.useState<number | null>(null);
 
   type Plan = {
     id: string;
@@ -29,16 +35,15 @@ export default function DashboardPage() {
 
   const plansQuery = useQuery({
     queryKey: ['plans'],
-    queryFn: async (): Promise<Plan[]> => {
+    queryFn: async (): Promise<{ plans: Plan[] }> => {
       const res = await fetch('/api/plans');
       if (!res.ok) throw new Error('Failed to load plans');
-      const data = await res.json();
-      return (data?.plans ?? []) as Plan[];
+      return res.json();
     },
   });
 
   const activePlan: Plan | undefined = React.useMemo(() => {
-    const plans = plansQuery.data ?? [];
+    const plans = plansQuery.data?.plans ?? [];
     const active = plans.find((p) => p.status === 'ACTIVE');
     return active ?? plans[0];
   }, [plansQuery.data]);
@@ -73,7 +78,7 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-semibold">Dashboard</h1>
         <div className="flex items-center gap-2">
           <Button asChild>
-            <Link href="/plans">View Plans</Link>
+            <Link href="/plans">View Skill Paths</Link>
           </Button>
           <Button variant="secondary" asChild>
             <Link href="/settings">Settings</Link>
@@ -84,25 +89,66 @@ export default function DashboardPage() {
       <OneThingCard
         oneThing={oneThing}
         isChecking={checkMutation.isPending}
-        onBegin={() => {
-          // Will open SessionTimer in V1 step 2.
-          // For now, no-op or console.log to avoid disrupting flow.
-          console.log('Begin Session clicked');
+        onBegin={(ot) => {
+          setCurrentOT(ot);
+          setShowTimer(true);
         }}
         onDone={(ot) => {
           checkMutation.mutate({ key: ot.key, checked: true });
         }}
       />
 
+      <SessionTimer
+        open={showTimer}
+        onClose={() => setShowTimer(false)}
+        durationMins={25}
+        midPromptAt={10}
+        title={oneThing ? oneThing.task.title : 'Session'}
+        onFinish={({ elapsedSec }) => {
+          // TODO: integrate sessions finish API; for now, just open journal
+          setLastElapsedSec(elapsedSec);
+          setShowTimer(false);
+          setShowJournal(true);
+        }}
+      />
+
+      <JournalModal
+        open={showJournal}
+        onClose={() => setShowJournal(false)}
+        onSubmit={async (values) => {
+          // Persist structured session with journal fields
+          try {
+            if (!currentOT || !activePlan) return;
+            const res = await fetch('/api/sessions/finish', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                planId: activePlan.id,
+                taskKey: currentOT.key,
+                durationSec: lastElapsedSec ?? undefined,
+                challenge: values.challenge,
+                breakthrough: values.breakthrough,
+              }),
+            });
+            if (!res.ok) {
+              const json = await res.json().catch(() => ({}));
+              throw new Error(json?.error || 'Failed to save session');
+            }
+          } catch (e) {
+            console.error('Failed to persist session', e);
+          }
+        }}
+      />
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader>
-            <CardTitle>Skill Plans</CardTitle>
+            <CardTitle>Skill Paths</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm text-muted-foreground">
-            <p>Create or continue your mastery plans.</p>
+            <p>Create or continue your Skill Paths.</p>
             <Button size="sm" asChild>
-              <Link href="/plans">Go to Plans</Link>
+              <Link href="/plans">Go to Skill Paths</Link>
             </Button>
           </CardContent>
         </Card>

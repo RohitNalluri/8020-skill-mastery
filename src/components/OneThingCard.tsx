@@ -34,10 +34,10 @@ export function OneThingCard({ oneThing, isChecking, onBegin, onDone }: OneThing
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            No pending tasks. Create your first plan to get started.
+            No pending tasks. Create your first Skill Path to get started.
           </p>
           <Button asChild>
-            <Link href="/plans">Create a Plan</Link>
+            <Link href="/plans">Create a Skill Path</Link>
           </Button>
         </CardContent>
       </Card>
