@@ -7,6 +7,7 @@ import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/prisma';
 import { decrypt } from '@/lib/crypto';
 import { generatePlanWithGemini } from '@/lib/gemini';
+import type { Prisma } from '@prisma/client';
 
 export async function POST(req: Request) {
   try {
@@ -40,8 +41,8 @@ export async function POST(req: Request) {
       data: {
         userId,
         skillToMaster: skill,
-        planData: planData as unknown as any,
-        taskCompletionStatus: {},
+        planData: planData as unknown as Prisma.InputJsonValue,
+        taskCompletionStatus: {} as unknown as Prisma.InputJsonValue,
         status: 'ACTIVE',
       },
       select: { id: true },

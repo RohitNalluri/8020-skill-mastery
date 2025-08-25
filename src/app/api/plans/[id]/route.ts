@@ -8,6 +8,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/prisma';
 import { setTaskResource } from '@/lib/plan-utils';
+import type { Prisma } from '@prisma/client';
 
 function countTrue(obj: Record<string, unknown>): number {
   return (Object.values(obj) as unknown[]).reduce<number>((acc, v) => acc + (v === true ? 1 : 0), 0);
@@ -61,7 +62,7 @@ export async function PATCH(
       const tasksCompleted = countTrue(updated);
       await prisma.plan.update({
         where: { id: plan.id },
-        data: { taskCompletionStatus: updated as unknown as any, tasksCompleted },
+        data: { taskCompletionStatus: updated as unknown as Prisma.InputJsonValue, tasksCompleted },
       });
       return NextResponse.json({ ok: true, tasksCompleted });
     }
@@ -70,8 +71,12 @@ export async function PATCH(
       const key = (body?.key ?? '').toString();
       const url = (body?.url ?? '').toString();
       if (!key || !url) return NextResponse.json({ error: 'key and url required' }, { status: 400 });
-      const nextPlanData = setTaskResource(plan.planData as unknown as any, key, url);
-      await prisma.plan.update({ where: { id: plan.id }, data: { planData: nextPlanData as any } });
+      const nextPlanData = setTaskResource(
+        plan.planData as unknown as import('@/lib/gemini').GeneratedPlan,
+        key,
+        url
+      );
+      await prisma.plan.update({ where: { id: plan.id }, data: { planData: nextPlanData as unknown as Prisma.InputJsonValue } });
       return NextResponse.json({ ok: true });
     }
 

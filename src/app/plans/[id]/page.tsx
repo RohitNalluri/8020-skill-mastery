@@ -7,7 +7,7 @@ import * as React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -206,7 +206,14 @@ export default function PlanDetailPage({ params }: PageProps) {
       await qc.invalidateQueries({ queryKey: ['plan', id] });
       await qc.invalidateQueries({ queryKey: ['plans'] });
     },
-    onError: (err: any) => setErrorMsg(err?.message || 'Failed to update status'),
+    onError: (err: unknown) => {
+      const msg = err instanceof Error
+        ? err.message
+        : (typeof err === 'object' && err !== null && 'message' in err && typeof (err as { message: unknown }).message === 'string')
+          ? (err as { message: string }).message
+          : 'Failed to update status';
+      setErrorMsg(msg);
+    },
   });
 
   if (isLoading) {

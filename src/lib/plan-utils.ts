@@ -41,3 +41,39 @@ export function setTaskResource(plan: import('@/lib/gemini').GeneratedPlan, key:
   });
   return { ...plan, weeks } as typeof plan;
 }
+
+/**
+ * Purpose: Determine the next "One Thing" task to focus on.
+ * Strategy: Iterate week/day/task order and prioritize produce/execution tasks
+ * (identified by resource === ''), then pick the first unchecked task.
+ * Returns identifiers and metadata for rendering the One Thing card.
+ */
+export function nextOneThing(
+  plan: import('@/lib/gemini').GeneratedPlan,
+  completion: Record<string, boolean | unknown>
+): { key: string; task: { title: string; description: string; resource?: string }; day: number; weekTitle: string } | null {
+  for (let wi = 0; wi < plan.weeks.length; wi += 1) {
+    const week = plan.weeks[wi];
+    for (let di = 0; di < week.days.length; di += 1) {
+      const day = week.days[di];
+      // Prefer produce tasks first (resource === ''). Keep original indices for keys.
+      const indices = day.tasks
+        .map((_, idx) => idx)
+        .sort((i, j) => {
+          const ai = day.tasks[i];
+          const bj = day.tasks[j];
+          const ap = (ai.resource ?? '') === '' ? 0 : 1;
+          const bp = (bj.resource ?? '') === '' ? 0 : 1;
+          return ap - bp;
+        });
+      for (let k = 0; k < indices.length; k += 1) {
+        const ti = indices[k];
+        const key = taskKey(wi, di, ti);
+        if (!completion[key]) {
+          return { key, task: day.tasks[ti], day: day.day, weekTitle: week.title };
+        }
+      }
+    }
+  }
+  return null;
+}
